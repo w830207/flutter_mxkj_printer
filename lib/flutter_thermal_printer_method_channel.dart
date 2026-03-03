@@ -22,6 +22,10 @@ class MethodChannelFlutterThermalPrinter extends FlutterThermalPrinterPlatform {
       methodChannel.invokeMethod('getUsbDevicesList');
 
   @override
+  Future<dynamic> startBluetoothScan() async =>
+      methodChannel.invokeMethod('getPairedBluetoothList');
+
+  @override
   Future<bool> connect(Printer device) async =>
       await methodChannel.invokeMethod('connect', device.toJson());
 
@@ -54,5 +58,25 @@ class MethodChannelFlutterThermalPrinter extends FlutterThermalPrinterPlatform {
       await methodChannel.invokeMethod('disconnect', {
         'vendorId': device.vendorId.toString(),
         'productId': device.productId.toString(),
+      });
+
+  @override
+  Future<bool> connectBluetooth(Printer device) async =>
+      await methodChannel.invokeMethod('connectBluetooth', device.toJson());
+
+  @override
+  Future<bool> disconnectBluetooth() async =>
+      await methodChannel.invokeMethod('disconnectBluetooth');
+
+  @override
+  Future<bool> printDataBluetooth(
+    Printer device,
+    Uint8List data, {
+    String? path,
+  }) async =>
+      await methodChannel.invokeMethod('printDataBluetooth', {
+        'name': device.name,
+        'data': List<int>.from(data),
+        'path': path ?? '',
       });
 }

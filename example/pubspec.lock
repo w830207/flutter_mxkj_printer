@@ -386,10 +386,10 @@ packages:
     dependency: transitive
     description:
       name: universal_ble
-      sha256: "3ce1066d5f87be12a2842780c0286fbeac06e21a2e14f37e88e29c909469c1c1"
+      sha256: "8325ca9f5cce2fba2b4efef74a4fcfe7144f303b409d6fc6ed16197b00a1a241"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.0"
+    version: "1.2.0"
   vector_math:
     dependency: transitive
     description:

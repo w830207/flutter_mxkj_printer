@@ -62,6 +62,8 @@ class Printer extends BleDevice {
         return 'USB';
       case ConnectionType.NETWORK:
         return 'NETWORK';
+      case ConnectionType.CLASSIC_BLUETOOTH:
+        return 'CLASSIC_BLUETOOTH';
       default:
         return 'UNKNOWN';
     }
@@ -107,6 +109,8 @@ class Printer extends BleDevice {
         return address != null;
       case ConnectionType.NETWORK:
         return address != null;
+      case ConnectionType.CLASSIC_BLUETOOTH:
+        return address != null;
       default:
         return false;
     }
@@ -130,6 +134,8 @@ class Printer extends BleDevice {
         return ConnectionType.USB;
       case 'NETWORK':
         return ConnectionType.NETWORK;
+      case 'CLASSIC_BLUETOOTH':
+        return ConnectionType.CLASSIC_BLUETOOTH;
       default:
         return null;
     }
@@ -141,4 +147,5 @@ enum ConnectionType {
   BLE,
   USB,
   NETWORK,
+  CLASSIC_BLUETOOTH,
 }

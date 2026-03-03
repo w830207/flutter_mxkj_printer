@@ -36,6 +36,7 @@ class PrinterManager {
 
   StreamSubscription? _bleSubscription;
   StreamSubscription? _usbSubscription;
+  // StreamSubscription? _classicBluetoothSubscription;
   StreamSubscription? _bleAvailabilitySubscription;
 
   static const String _channelName = 'flutter_thermal_printer/events';
@@ -61,6 +62,7 @@ class PrinterManager {
   Future<void> stopScan({
     bool stopBle = true,
     bool stopUsb = true,
+    bool stopClassicBluetooth = true,
   }) async {
     try {
       if (stopBle) {
@@ -72,6 +74,10 @@ class PrinterManager {
         await _usbSubscription?.cancel();
         _usbSubscription = null;
       }
+      // if (stopClassicBluetooth) {
+      //   await _classicBluetoothSubscription?.cancel();
+      //   _classicBluetoothSubscription = null;
+      // }
     } catch (e) {
       log('Failed to stop scanning for devices: $e');
     }
@@ -93,7 +99,9 @@ class PrinterManager {
     Printer device, {
     Duration? connectionStabilizationDelay,
   }) async {
-    if (device.connectionType == ConnectionType.USB) {
+    if (device.connectionType == ConnectionType.CLASSIC_BLUETOOTH) {
+      return FlutterThermalPrinterPlatform.instance.connectBluetooth(device);
+    } else if (device.connectionType == ConnectionType.USB) {
       if (Platform.isWindows) {
         // Windows USB connection - device is already available, no connection needed
         return true;
@@ -151,6 +159,7 @@ class PrinterManager {
         return false;
       }
     }
+
     return false;
   }
 
@@ -188,6 +197,8 @@ class PrinterManager {
       } catch (e) {
         log('Failed to disconnect device: $e');
       }
+    } else if (device.connectionType == ConnectionType.CLASSIC_BLUETOOTH) {
+      await FlutterThermalPrinterPlatform.instance.disconnectBluetooth();
     }
 
     ///
@@ -205,75 +216,131 @@ class PrinterManager {
     bool longData = false,
     int? chunkSize,
   }) async {
-    if (printer.connectionType == ConnectionType.USB) {
-      if (Platform.isWindows) {
-        // Windows USB printing using Win32 API
-        using((alloc) {
-          RawPrinter(printer.name!, alloc).printEscPosWin32(bytes);
-        });
-        return;
-      } else {
-        // Non-Windows USB printing
-        try {
-          await FlutterThermalPrinterPlatform.instance.printText(
-            printer,
-            Uint8List.fromList(bytes),
-            path: printer.address,
-          );
-        } catch (e) {
-          log('FlutterThermalPrinter: Unable to Print Data $e');
+    switch (printer.connectionType) {
+      case ConnectionType.BLE:
+        await _printInBLE(
+          printer,
+          bytes,
+          longData: longData,
+          chunkSize: chunkSize,
+        );
+      case ConnectionType.USB:
+        await _printInUSB(
+          printer,
+          bytes,
+          longData: longData,
+          chunkSize: chunkSize,
+        );
+
+      case ConnectionType.CLASSIC_BLUETOOTH:
+        await _printInClassicBluetooth(
+          printer,
+          bytes,
+          longData: longData,
+          chunkSize: chunkSize,
+        );
+
+      default:
+    }
+  }
+
+  Future<void> _printInBLE(
+    Printer printer,
+    List<int> bytes, {
+    bool longData = false,
+    int? chunkSize,
+  }) async {
+    try {
+      final services = await printer.discoverServices();
+
+      BleCharacteristic? writeCharacteristic;
+      for (final service in services) {
+        for (final characteristic in service.characteristics) {
+          if (characteristic.properties.contains(
+            CharacteristicProperty.write,
+          )) {
+            writeCharacteristic = characteristic;
+            break;
+          }
         }
       }
-    } else if (printer.connectionType == ConnectionType.BLE) {
+
+      if (writeCharacteristic == null) {
+        log('No write characteristic found');
+        return;
+      }
+      final mtu = chunkSize ??
+          (Platform.isWindows
+              ? 50
+              : await printer.requestMtu(Platform.isMacOS ? 150 : 500));
+      final maxChunkSize = mtu - 3;
+
+      for (var i = 0; i < bytes.length; i += maxChunkSize) {
+        final chunk = bytes.sublist(
+          i,
+          i + maxChunkSize > bytes.length ? bytes.length : i + maxChunkSize,
+        );
+
+        await writeCharacteristic.write(
+          Uint8List.fromList(chunk),
+        );
+
+        // Small delay between chunks to avoid overwhelming the device
+        if (longData) {
+          await Future.delayed(const Duration(milliseconds: 10));
+        }
+
+        ///
+        /// [refreshDuration] The duration between each scan refresh.
+        /// [connectionTypes] List of connection types to scan for (BLE, USB).
+        /// [androidUsesFineLocation] Whether to use fine location on Android for BLE scanning.
+      }
+      return;
+    } catch (e) {
+      log('Failed to print data to device $e');
+    }
+  }
+
+  Future<void> _printInUSB(
+    Printer printer,
+    List<int> bytes, {
+    bool longData = false,
+    int? chunkSize,
+  }) async {
+    if (Platform.isWindows) {
+      // Windows USB printing using Win32 API
+      using((alloc) {
+        RawPrinter(printer.name!, alloc).printEscPosWin32(bytes);
+      });
+      return;
+    } else {
+      // Non-Windows USB printing
       try {
-        final services = await printer.discoverServices();
-
-        BleCharacteristic? writeCharacteristic;
-        for (final service in services) {
-          for (final characteristic in service.characteristics) {
-            if (characteristic.properties.contains(
-              CharacteristicProperty.write,
-            )) {
-              writeCharacteristic = characteristic;
-              break;
-            }
-          }
-        }
-
-        if (writeCharacteristic == null) {
-          log('No write characteristic found');
-          return;
-        }
-        final mtu = chunkSize ??
-            (Platform.isWindows
-                ? 50
-                : await printer.requestMtu(Platform.isMacOS ? 150 : 500));
-        final maxChunkSize = mtu - 3;
-
-        for (var i = 0; i < bytes.length; i += maxChunkSize) {
-          final chunk = bytes.sublist(
-            i,
-            i + maxChunkSize > bytes.length ? bytes.length : i + maxChunkSize,
-          );
-
-          await writeCharacteristic.write(
-            Uint8List.fromList(chunk),
-          );
-
-          // Small delay between chunks to avoid overwhelming the device
-          if (longData) {
-            await Future.delayed(const Duration(milliseconds: 10));
-          }
-
-          ///
-          /// [refreshDuration] The duration between each scan refresh.
-          /// [connectionTypes] List of connection types to scan for (BLE, USB).
-          /// [androidUsesFineLocation] Whether to use fine location on Android for BLE scanning.
-        }
-        return;
+        await FlutterThermalPrinterPlatform.instance.printText(
+          printer,
+          Uint8List.fromList(bytes),
+          path: printer.address,
+        );
       } catch (e) {
-        log('Failed to print data to device $e');
+        log('FlutterThermalPrinter: Unable to Print Data $e');
       }
+    }
+  }
+
+  Future<void> _printInClassicBluetooth(
+    Printer printer,
+    List<int> bytes, {
+    bool longData = false,
+    int? chunkSize,
+  }) async {
+    try {
+      await FlutterThermalPrinterPlatform.instance.printDataBluetooth(
+        printer,
+        Uint8List.fromList(bytes),
+        path: printer.address,
+      );
+    } catch (e) {
+      log('FlutterThermalPrinter: Unable to Print Data $e');
     }
   }
 
@@ -283,6 +350,7 @@ class PrinterManager {
     List<ConnectionType> connectionTypes = const [
       ConnectionType.BLE,
       ConnectionType.USB,
+      ConnectionType.CLASSIC_BLUETOOTH,
     ],
     bool androidUsesFineLocation = false,
   }) async {
@@ -296,6 +364,10 @@ class PrinterManager {
 
     if (connectionTypes.contains(ConnectionType.BLE)) {
       await _getBLEPrinters(androidUsesFineLocation);
+    }
+
+    if (connectionTypes.contains(ConnectionType.CLASSIC_BLUETOOTH)) {
+      await _getClassicBluetoothPrinters(refreshDuration);
     }
   }
 
@@ -456,6 +528,34 @@ class PrinterManager {
     } catch (e) {
       log('Failed to start BLE scan: $e');
       rethrow;
+    }
+  }
+
+  /// Classic Bluetooth Printer discovery for all platforms
+  Future<void> _getClassicBluetoothPrinters(Duration refreshDuration) async {
+    try {
+      final devices =
+          await FlutterThermalPrinterPlatform.instance.startBluetoothScan();
+
+      final bluetoothPrinters = <Printer>[];
+      for (final map in devices) {
+        final printer = Printer(
+          name: map['name'],
+          connectionType: ConnectionType.CLASSIC_BLUETOOTH,
+          address: map['address'].toString(),
+          isConnected: false,
+        );
+
+        bluetoothPrinters.add(printer);
+      }
+
+      for (final printer in bluetoothPrinters) {
+        _updateOrAddPrinter(printer);
+      }
+
+      sortDevices();
+    } catch (e) {
+      log('$e [CLASSIC BLUETOOTH Connection]');
     }
   }
 

@@ -40,6 +40,22 @@ class MockFlutterThermalPrinterPlatform
 
   @override
   Future<void> getPrinters() async {}
+
+  @override
+  Future<void> printDataBluetooth(
+    Printer device,
+    Uint8List data, {
+    String? path,
+  }) async {}
+
+  @override
+  Future<bool> connectBluetooth(Printer device) async => false;
+
+  @override
+  Future<bool> disconnectBluetooth() async => true;
+
+  @override
+  Future<dynamic> startBluetoothScan() async => [];
 }
 
 void main() {

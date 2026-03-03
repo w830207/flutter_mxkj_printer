@@ -1,3 +1,5 @@
+// ignore_for_file: comment_references
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -114,6 +116,7 @@ class FlutterThermalPrinter {
     List<ConnectionType> connectionTypes = const [
       ConnectionType.USB,
       ConnectionType.BLE,
+      ConnectionType.CLASSIC_BLUETOOTH,
     ],
     bool androidUsesFineLocation = false,
   }) async {

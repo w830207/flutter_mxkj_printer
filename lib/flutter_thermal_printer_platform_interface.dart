@@ -10,6 +10,7 @@ abstract class FlutterThermalPrinterPlatform extends PlatformInterface {
   static final Object _token = Object();
   static FlutterThermalPrinterPlatform _instance =
       MethodChannelFlutterThermalPrinter();
+
   static FlutterThermalPrinterPlatform get instance => _instance;
 
   static set instance(FlutterThermalPrinterPlatform instance) {
@@ -53,5 +54,25 @@ abstract class FlutterThermalPrinterPlatform extends PlatformInterface {
 
   Future<void> getPrinters() {
     throw UnimplementedError('getPrinters() has not been implemented.');
+  }
+
+  Future<dynamic> startBluetoothScan() {
+    throw UnimplementedError('startScan() has not been implemented.');
+  }
+
+  Future<bool> connectBluetooth(Printer device) {
+    throw UnimplementedError('connect() has not been implemented.');
+  }
+
+  Future<bool> disconnectBluetooth() {
+    throw UnimplementedError('disconnect() has not been implemented.');
+  }
+
+  Future<void> printDataBluetooth(
+    Printer device,
+    Uint8List data, {
+    String? path,
+  }) {
+    throw UnimplementedError('printDataBluetooth() has not been implemented.');
   }
 }

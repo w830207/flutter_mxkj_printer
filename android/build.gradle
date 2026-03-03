@@ -2,33 +2,34 @@ group 'com.example.flutter_thermal_printer'
 version '1.0'
 
 buildscript {
+    ext.kotlin_version = "1.8.22"
     repositories {
         google()
         mavenCentral()
-        
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.3.0'
-        
+        classpath("com.android.tools.build:gradle:8.1.0")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
     }
 }
 
-rootProject.allprojects {
+allprojects {
     repositories {
         google()
         mavenCentral()
     }
 }
 
-apply plugin: 'com.android.library'
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
 
 android {
     if (project.android.hasProperty("namespace")) {
         namespace 'com.example.flutter_thermal_printer'
     }
 
-    compileSdkVersion 36
+    compileSdkVersion 34
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -36,7 +37,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 21
     }
 
     dependencies {

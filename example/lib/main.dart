@@ -32,20 +32,21 @@ class _MyAppState extends State<MyApp> {
   // Get Printer List
   void startScan() async {
     _devicesStreamSubscription?.cancel();
-    await _flutterThermalPrinterPlugin.getPrinters(connectionTypes: [
-      ConnectionType.USB,
-      ConnectionType.BLE,
-    ]);
+
     _devicesStreamSubscription = _flutterThermalPrinterPlugin.devicesStream
         .listen((List<Printer> event) {
       setState(() {
         printers = event;
-        printers.removeWhere((element) =>
-            element.name == null ||
-            element.name == '' ||
-            element.name!.toLowerCase().contains("print") == false);
+        printers.removeWhere(
+            (element) => element.name == null || element.name == '');
       });
     });
+
+    await _flutterThermalPrinterPlugin.getPrinters(connectionTypes: [
+      ConnectionType.CLASSIC_BLUETOOTH,
+      // ConnectionType.USB,
+      // ConnectionType.BLE,
+    ]);
   }
 
   @override
@@ -55,7 +56,7 @@ class _MyAppState extends State<MyApp> {
       _flutterThermalPrinterPlugin.bleConfig = const BleConfig(
         connectionStabilizationDelay: Duration(seconds: 3),
       );
-      startScan();
+      // startScan();
     });
   }
 
@@ -195,8 +196,9 @@ class _MyAppState extends State<MyApp> {
                         }
                       },
                       title: Text(printers[index].name ?? 'No Name'),
-                      subtitle:
-                          Text("Connected: ${printers[index].isConnected}"),
+                      subtitle: Text("Connected: ${printers[index].isConnected}" +
+                          "\n" +
+                          "Connection Type: ${printers[index].connectionTypeString}"),
                       trailing: IconButton(
                         icon: const Icon(Icons.connect_without_contact),
                         onPressed: () async {
@@ -208,16 +210,32 @@ class _MyAppState extends State<MyApp> {
                           //   data,
                           //   longData: true,
                           // );
+                          await _flutterThermalPrinterPlugin.disconnect(printers[index]);
+                          // //
+                          await _flutterThermalPrinterPlugin.connect(printers[index]);
 
-                          await _flutterThermalPrinterPlugin.printWidget(
-                            context,
-                            printOnBle: true,
-                            cutAfterPrinted: true,
-                            printer: printers[index],
-                            widget: receiptWidget(
-                              printers[index].connectionTypeString,
-                            ),
+                          final data = await _generateReceipt(
+                            type: printers[index].connectionTypeString,
                           );
+                          await _flutterThermalPrinterPlugin.printData(
+                            printers[index],
+                            data,
+                            longData: true,
+                          );
+
+                          // final bytes = await _generateReceipt();
+                          //
+                          // await _flutterThermalPrinterPlugin.printData(printers[index], bytes);
+
+                          // await _flutterThermalPrinterPlugin.printWidget(
+                          //   context,
+                          //   printOnBle: true,
+                          //   cutAfterPrinted: true,
+                          //   printer: printers[index],
+                          //   widget: receiptWidget(
+                          //     printers[index].connectionTypeString,
+                          //   ),
+                          // );
                         },
                       ),
                     );
@@ -233,8 +251,18 @@ class _MyAppState extends State<MyApp> {
 
   Future<List<int>> _generateReceipt({String? type}) async {
     final profile = await CapabilityProfile.load();
-    final generator = Generator(PaperSize.mm80, profile);
+    final generator = Generator(PaperSize.mm58, profile);
     List<int> bytes = [];
+    bytes += generator.text(
+      '妳好 您好 こんにちは 안녕하세요',
+      styles: const PosStyles(
+        align: PosAlign.center,
+        bold: true,
+        height: PosTextSize.size2,
+        width: PosTextSize.size2,
+      ),
+      containsChinese: true,
+    );
     bytes += generator.text(
       'FLUTTER THERMAL PRINTER',
       styles: const PosStyles(
