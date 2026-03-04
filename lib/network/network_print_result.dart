@@ -3,7 +3,7 @@ class NetworkPrintResult {
   final int value;
   static const success = NetworkPrintResult._internal(1);
   static const timeout = NetworkPrintResult._internal(2);
-  static const printerConnected = NetworkPrintResult._internal(3);
+  static const printerNotConnected = NetworkPrintResult._internal(3);
   static const ticketEmpty = NetworkPrintResult._internal(4);
   static const printInProgress = NetworkPrintResult._internal(5);
   static const scanInProgress = NetworkPrintResult._internal(6);
@@ -13,7 +13,7 @@ class NetworkPrintResult {
       return 'Success';
     } else if (value == NetworkPrintResult.timeout.value) {
       return 'Error. Printer connection timeout';
-    } else if (value == NetworkPrintResult.printerConnected.value) {
+    } else if (value == NetworkPrintResult.printerNotConnected.value) {
       return 'Error. Printer not connected';
     } else if (value == NetworkPrintResult.ticketEmpty.value) {
       return 'Error. Ticket is empty';

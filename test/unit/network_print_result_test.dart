@@ -12,8 +12,8 @@ void main() {
         expect(NetworkPrintResult.timeout.value, 2);
       });
 
-      test('printerConnected has value 3', () {
-        expect(NetworkPrintResult.printerConnected.value, 3);
+      test('printerNotConnected has value 3', () {
+        expect(NetworkPrintResult.printerNotConnected.value, 3);
       });
 
       test('ticketEmpty has value 4', () {
@@ -41,9 +41,9 @@ void main() {
         );
       });
 
-      test('printerConnected returns not connected message', () {
+      test('printerNotConnected returns not connected message', () {
         expect(
-          NetworkPrintResult.printerConnected.msg,
+          NetworkPrintResult.printerNotConnected.msg,
           'Error. Printer not connected',
         );
       });
